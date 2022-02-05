@@ -8,6 +8,7 @@ using System.Configuration; // Namespace for ConfigurationManager
 //using Azure.Identity;
 using Azure.Storage.Queues; // Namespace for Queue storage types
 using Azure.Storage.Queues.Models; // Namespace for PeekedMessage
+using Microsoft.Extensions.Configuration;
 
 namespace balduinoman_web_app_queue.Controllers
 {
@@ -21,17 +22,38 @@ namespace balduinoman_web_app_queue.Controllers
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
+        private readonly IConfiguration _configuration;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IConfiguration configuration)
         {
             _logger = logger;
+            _configuration = configuration;
         }
 
         [HttpGet]
-        public void Get()
+        public ActionResult<PeekedMessage[]> Get()
+        {
+            PeekedMessage[] peekedMessage = null;
+            // Get the connection string from app settings
+            string connectionString = _configuration.GetConnectionString("StorageConnectionString");
+
+            // Instantiate a QueueClient which will be used to create and manipulate the queue
+            QueueClient queueClient = new QueueClient(connectionString, "messages");
+
+            if (queueClient.Exists())
+            { 
+                // Peek at the next message
+                peekedMessage = queueClient.PeekMessages();
+            }
+
+            return peekedMessage;
+        }
+
+        [HttpPost]
+        public void Post()
         {
             // Get the connection string from app settings
-            string connectionString = ConfigurationManager.AppSettings["StorageConnectionString"];
+            string connectionString = _configuration.GetConnectionString("StorageConnectionString");
 
             // Instantiate a QueueClient which will be used to create and manipulate the queue
             QueueClient queueClient = new QueueClient(connectionString, "messages");
